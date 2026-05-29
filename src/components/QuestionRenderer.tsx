@@ -2,6 +2,129 @@ import React, { useState, useEffect } from 'react';
 import { Question } from '../types';
 import { ArrowUp, ArrowDown, Image as ImageIcon, Video, Check, HelpCircle } from 'lucide-react';
 
+interface StepOrderingRendererProps {
+  options: string[];
+  value: any;
+  onChange: (val: any) => void;
+  disabled: boolean;
+  showCorrectAnswers: boolean;
+}
+
+const StepOrderingRenderer: React.FC<StepOrderingRendererProps> = ({
+  options,
+  value,
+  onChange,
+  disabled,
+  showCorrectAnswers,
+}) => {
+  const orderString = value as string;
+  const itemsCount = options.length;
+
+  const [currentOrder, setCurrentOrder] = useState<number[]>([]);
+
+  useEffect(() => {
+    if (orderString) {
+      setCurrentOrder(orderString.split(',').map(Number));
+    } else {
+      const base = Array.from({ length: itemsCount }, (_, i) => i);
+      setCurrentOrder(base);
+      onChange(base.join(','));
+    }
+  }, [orderString, itemsCount, onChange]);
+
+  const handleMove = (index: number, direction: 'up' | 'down') => {
+    if (disabled) return;
+    const newOrder = [...currentOrder];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+
+    if (targetIndex < 0 || targetIndex >= itemsCount) return;
+
+    const temp = newOrder[index];
+    newOrder[index] = newOrder[targetIndex];
+    newOrder[targetIndex] = temp;
+
+    setCurrentOrder(newOrder);
+    onChange(newOrder.join(','));
+  };
+
+  return (
+    <div id="renderer-ordering" className="space-y-3">
+      <p className="text-xs text-slate-500 font-medium">Change order using the control keys on the right:</p>
+      
+      <div className="space-y-2">
+        {currentOrder.map((originalIndex, orderPos) => {
+          const stepText = options[originalIndex];
+          const isCorrectIndex = originalIndex === orderPos;
+
+          let rowStyle = "border-slate-200 bg-white";
+          if (showCorrectAnswers) {
+            rowStyle = isCorrectIndex
+              ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+              : "border-rose-300 bg-rose-50 text-rose-900";
+          }
+
+          return (
+            <div
+              id={`ordering-row-${orderPos}`}
+              key={originalIndex}
+              className={`flex items-center justify-between p-3.5 border rounded-xl gap-3 transition shadow-sm ${rowStyle}`}
+            >
+              <div className="flex items-center gap-3.5">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 transition ${
+                  showCorrectAnswers
+                    ? isCorrectIndex
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-rose-600 text-white'
+                    : 'bg-indigo-50 border border-indigo-100 text-indigo-700'
+                }`}>
+                  {orderPos + 1}
+                </div>
+                <span className="text-[14px] leading-relaxed text-slate-800 font-semibold">{stepText}</span>
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  id={`order-up-${orderPos}`}
+                  type="button"
+                  disabled={disabled || orderPos === 0}
+                  onClick={() => handleMove(orderPos, 'up')}
+                  className={`p-1.5 rounded bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-600 transition ${
+                    (disabled || orderPos === 0) ? 'opacity-40 cursor-not-allowed' : ''
+                  }`}
+                >
+                  <ArrowUp className="w-4 h-4" />
+                </button>
+                <button
+                  id={`order-down-${orderPos}`}
+                  type="button"
+                  disabled={disabled || orderPos === itemsCount - 1}
+                  onClick={() => handleMove(orderPos, 'down')}
+                  className={`p-1.5 rounded bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-600 transition ${
+                    (disabled || orderPos === itemsCount - 1) ? 'opacity-40 cursor-not-allowed' : ''
+                  }`}
+                >
+                  <ArrowDown className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      
+      {showCorrectAnswers && (
+        <div id="ordering-correct-flow" className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 text-[13px] text-emerald-900 space-y-1">
+          <strong>Correct Sequence Path:</strong>
+          <ol className="list-decimal pl-5 space-y-1">
+            {options.map((step, idx) => (
+              <li key={idx} className="font-semibold">{step}</li>
+            ))}
+          </ol>
+        </div>
+      )}
+    </div>
+  );
+};
+
 interface QuestionRendererProps {
   question: Question;
   value: any; // User answer
@@ -517,118 +640,6 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
     );
   };
 
-  // --- 9. Step Ordering Questions Renderer ---
-  const renderStepOrdering = () => {
-    // Value represents comma separated list of original indices: e.g. "2,0,1,3,4"
-    const orderString = value as string;
-    const itemsCount = options.length;
-
-    // Use internal state first to support easier reordering transitions safely
-    const [currentOrder, setCurrentOrder] = useState<number[]>([]);
-
-    useEffect(() => {
-      if (orderString) {
-        setCurrentOrder(orderString.split(',').map(Number));
-      } else {
-        // Initialize with default ascending range
-        const base = Array.from({ length: itemsCount }, (_, i) => i);
-        setCurrentOrder(base);
-        onChange(base.join(','));
-      }
-    }, [orderString, itemsCount]);
-
-    const handleMove = (index: number, direction: 'up' | 'down') => {
-      if (disabled) return;
-      const newOrder = [...currentOrder];
-      const targetIndex = direction === 'up' ? index - 1 : index + 1;
-
-      if (targetIndex < 0 || targetIndex >= itemsCount) return;
-
-      // Swap
-      const temp = newOrder[index];
-      newOrder[index] = newOrder[targetIndex];
-      newOrder[targetIndex] = temp;
-
-      setCurrentOrder(newOrder);
-      onChange(newOrder.join(','));
-    };
-
-    return (
-      <div id="renderer-ordering" className="space-y-3">
-        <p className="text-xs text-slate-500 font-medium">Change order using the control keys on the right:</p>
-        
-        <div className="space-y-2">
-          {currentOrder.map((originalIndex, orderPos) => {
-            const stepText = options[originalIndex];
-            const isCorrectIndex = originalIndex === orderPos;
-
-            let rowStyle = "border-slate-200 bg-white";
-            if (showCorrectAnswers) {
-              rowStyle = isCorrectIndex
-                ? "border-emerald-300 bg-emerald-50 text-emerald-900"
-                : "border-rose-300 bg-rose-50 text-rose-900";
-            }
-
-            return (
-              <div
-                id={`ordering-row-${orderPos}`}
-                key={originalIndex}
-                className={`flex items-center justify-between p-3.5 border rounded-xl gap-3 transition shadow-sm ${rowStyle}`}
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 transition ${
-                    showCorrectAnswers
-                      ? isCorrectIndex
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-rose-600 text-white'
-                      : 'bg-indigo-50 border border-indigo-100 text-indigo-700'
-                  }`}>
-                    {orderPos + 1}
-                  </div>
-                  <span className="text-[14px] leading-relaxed text-slate-800 font-semibold">{stepText}</span>
-                </div>
-
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    id={`order-up-${orderPos}`}
-                    disabled={disabled || orderPos === 0}
-                    onClick={() => handleMove(orderPos, 'up')}
-                    className={`p-1.5 rounded bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-600 transition ${
-                      (disabled || orderPos === 0) ? 'opacity-40 cursor-not-allowed' : ''
-                    }`}
-                  >
-                    <ArrowUp className="w-4 h-4" />
-                  </button>
-                  <button
-                    id={`order-down-${orderPos}`}
-                    disabled={disabled || orderPos === itemsCount - 1}
-                    onClick={() => handleMove(orderPos, 'down')}
-                    className={`p-1.5 rounded bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-600 transition ${
-                      (disabled || orderPos === itemsCount - 1) ? 'opacity-40 cursor-not-allowed' : ''
-                    }`}
-                  >
-                    <ArrowDown className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        
-        {showCorrectAnswers && (
-          <div id="ordering-correct-flow" className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 text-[13px] text-emerald-900 space-y-1">
-            <strong>Correct Sequence Path:</strong>
-            <ol className="list-decimal pl-5 space-y-1">
-              {options.map((step, idx) => (
-                <li key={idx} className="font-semibold">{step}</li>
-              ))}
-            </ol>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   // --- 10. Multi-select Renderer ---
   const renderMultiSelect = () => {
     // Value stores string delimited by "|" e.g. "Google Docs|Dropbox Paper"
@@ -716,7 +727,15 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
       case 'hotspot':
         return renderHotspot();
       case 'step-ordering':
-        return renderStepOrdering();
+        return (
+          <StepOrderingRenderer
+            options={options}
+            value={value}
+            onChange={onChange}
+            disabled={disabled}
+            showCorrectAnswers={showCorrectAnswers}
+          />
+        );
       case 'multi-select':
         return renderMultiSelect();
       case 'video-question':

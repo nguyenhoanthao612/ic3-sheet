@@ -6,6 +6,7 @@ interface LandingViewProps {
   onEnterExam: () => void;
   onEnterAdmin: () => void;
   totalQuestionsCount: number;
+  isAdmin?: boolean;
 }
 
 export const LandingView: React.FC<LandingViewProps> = ({
@@ -13,6 +14,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
   onEnterExam,
   onEnterAdmin,
   totalQuestionsCount,
+  isAdmin = false,
 }) => {
   return (
     <div id="landing-page" className="space-y-16 py-4">
@@ -91,13 +93,19 @@ export const LandingView: React.FC<LandingViewProps> = ({
               </div>
             </div>
 
-            <button
-              id="cta-admin-sync"
-              onClick={onEnterAdmin}
-              className="w-full py-2.5 rounded-lg border border-white/10 hover:border-white/20 hover:bg-white/5 text-[11px] font-bold text-slate-200 tracking-wider uppercase transition cursor-pointer"
-            >
-              Configure Custom Spreadsheet
-            </button>
+            {isAdmin ? (
+              <button
+                id="cta-admin-sync"
+                onClick={onEnterAdmin}
+                className="w-full py-2.5 rounded-lg border border-white/10 hover:border-white/20 hover:bg-white/5 text-[11px] font-bold text-slate-200 tracking-wider uppercase transition cursor-pointer"
+              >
+                Configure Custom Spreadsheet
+              </button>
+            ) : (
+              <div className="p-3 bg-white/5 border border-white/10 rounded-xl text-center text-[10px] font-semibold text-slate-350 leading-normal">
+                🔒 Spreadsheet database syncing configured by Administrators only
+              </div>
+            )}
           </div>
         </div>
       </div>

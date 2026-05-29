@@ -212,6 +212,20 @@ export const useAppData = () => {
 
     setHistory(prev => [newHistoryEntry, ...prev]);
 
+    // Submit live stats to secure server analytics database
+    fetch('/api/exams/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Nguyen H. (You)',
+        score: attempt.score,
+        totalQuestions: attempt.totalQuestions,
+        correctCount: attempt.correctCount,
+        duration: attempt.timeSpent,
+        examType: attempt.examType
+      })
+    }).catch(err => console.error("Could not record session score server-side:", err));
+
     // Give dynamic reward XP
     const baseXP = attempt.correctCount * 15; // 15 XP per correct question
     const passBonus = attempt.passed ? 100 : 0; // 100 XP pass bonus reward

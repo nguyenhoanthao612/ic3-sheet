@@ -6,6 +6,9 @@ import { PracticeView } from './components/PracticeView';
 import { ExamView } from './components/ExamView';
 import { LessonsView } from './components/LessonsView';
 import { AdminView } from './components/AdminView';
+import { AdminLogin } from './components/AdminLogin';
+import { AdminPanel } from './components/AdminPanel';
+import { RoleSelectionView } from './components/RoleSelectionView';
 import {
   Layout,
   BookOpen,
@@ -49,6 +52,151 @@ export default function App() {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
+
+  // Secure admin session status tracking variables
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean | null>(null);
+  const [adminUser, setAdminUser] = useState<{ email: string } | null>(null);
+  const [adminSubRoute, setAdminSubRoute] = useState<'dashboard' | 'questions' | 'exams' | 'students' | 'settings'>('dashboard');
+
+  // Role selections state management
+  const [selectedRole, setSelectedRole] = useState<'student' | 'admin' | null>(() => {
+    return localStorage.getItem('ic3_selected_role') as 'student' | 'admin' | null;
+  });
+
+  useEffect(() => {
+    if (selectedRole) {
+      localStorage.setItem('ic3_selected_role', selectedRole);
+    } else {
+      localStorage.removeItem('ic3_selected_role');
+    }
+  }, [selectedRole]);
+
+  const checkAdminSession = async () => {
+    try {
+      const token = localStorage.getItem('ic3_admin_token') || '';
+      const res = await fetch('/api/admin/session', {
+        headers: {
+          'x-admin-token': token
+        }
+      });
+      const data = await res.json();
+      if (data.authenticated) {
+        setIsAdminAuthenticated(true);
+        setAdminUser(data.user);
+        return true;
+      } else {
+        setIsAdminAuthenticated(false);
+        setAdminUser(null);
+        return false;
+      }
+    } catch {
+      setIsAdminAuthenticated(false);
+      setAdminUser(null);
+      return false;
+    }
+  };
+
+  const navigateTo = (route: string) => {
+    let path = '/';
+    if (route === 'role-select') path = '/';
+    else if (route === 'admin-login') path = '/admin/login';
+    else if (route === 'admin-dashboard') path = '/admin/dashboard';
+    else if (route === 'admin-questions') path = '/admin/questions';
+    else if (route === 'admin-exams') path = '/admin/exams';
+    else if (route === 'admin-students') path = '/admin/students';
+    else if (route === 'admin-settings') path = '/admin/settings';
+    else if (route === 'practice') path = '/practice';
+    else if (route === 'mock-exam') path = '/mock-exam';
+    else if (route === 'lessons') path = '/lessons';
+    else if (route === 'leaderboard') path = '/leaderboard';
+    else if (route === 'dashboard') path = '/dashboard';
+    else if (route === 'review-mistakes') path = '/review-mistakes';
+    else if (route === 'landing') path = '/student/home';
+    
+    if (window.location.pathname !== path) {
+      window.history.pushState(null, '', path);
+    }
+    setCurrentRoute(route);
+  };
+
+  // Synchronize path location in popstate and setup on-load router initializers 
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const path = window.location.pathname;
+      const storedRole = localStorage.getItem('ic3_selected_role');
+
+      if (!storedRole) {
+        setCurrentRoute('role-select');
+        return;
+      }
+
+      if (path.startsWith('/admin')) {
+        if (storedRole !== 'admin') {
+          setCurrentRoute('landing');
+        } else {
+          if (path === '/admin/login') {
+            setCurrentRoute('admin-login');
+            setAdminSubRoute('dashboard');
+          } else if (path === '/admin/dashboard') {
+            setCurrentRoute('admin-dashboard');
+            setAdminSubRoute('dashboard');
+          } else if (path === '/admin/questions') {
+             setCurrentRoute('admin-questions');
+             setAdminSubRoute('questions');
+          } else if (path === '/admin/exams') {
+             setCurrentRoute('admin-exams');
+             setAdminSubRoute('exams');
+          } else if (path === '/admin/students') {
+             setCurrentRoute('admin-students');
+             setAdminSubRoute('students');
+          } else if (path === '/admin/settings') {
+             setCurrentRoute('admin-settings');
+             setAdminSubRoute('settings');
+          }
+        }
+      } else if (path === '/practice') {
+        setCurrentRoute('practice');
+      } else if (path === '/mock-exam') {
+        setCurrentRoute('mock-exam');
+      } else if (path === '/lessons') {
+        setCurrentRoute('lessons');
+      } else if (path === '/leaderboard') {
+        setCurrentRoute('leaderboard');
+      } else if (path === '/dashboard') {
+        setCurrentRoute('dashboard');
+      } else if (path === '/review-mistakes') {
+        setCurrentRoute('review-mistakes');
+      } else if (path === '/student/home') {
+        setCurrentRoute('landing');
+      } else {
+        setCurrentRoute('landing');
+      }
+    };
+
+    window.addEventListener('popstate', handleLocationChange);
+    // Trigger initial check
+    handleLocationChange();
+
+    return () => window.removeEventListener('popstate', handleLocationChange);
+  }, []);
+
+  // Safeguard routes protection hook
+  useEffect(() => {
+    if (selectedRole === 'student' && currentRoute.startsWith('admin-')) {
+      navigateTo('landing');
+      return;
+    }
+
+    if (currentRoute && currentRoute.startsWith('admin-')) {
+      checkAdminSession().then(isAuthed => {
+        if (!isAuthed && currentRoute !== 'admin-login') {
+          navigateTo('admin-login');
+        } else if (isAuthed && currentRoute === 'admin-login') {
+          navigateTo('admin-dashboard');
+        }
+      });
+    }
+  }, [currentRoute, selectedRole]);
 
   // Synchronization with server on load if googleSheetId is set
   useEffect(() => {
@@ -270,6 +418,25 @@ export default function App() {
   // Switch views corresponding to State routing
   const renderActiveView = () => {
     switch (currentRoute) {
+      case 'role-select':
+        return (
+          <RoleSelectionView
+            onSelectRole={(role) => {
+              setSelectedRole(role);
+              if (role === 'student') {
+                navigateTo('landing');
+              } else {
+                checkAdminSession().then(isAuthed => {
+                  if (isAuthed) {
+                    navigateTo('admin-dashboard');
+                  } else {
+                    navigateTo('admin-login');
+                  }
+                });
+              }
+            }}
+          />
+        );
       case 'landing':
         return (
           <LandingView
@@ -277,6 +444,7 @@ export default function App() {
             onEnterExam={() => setCurrentRoute('mock-exam')}
             onEnterAdmin={() => setCurrentRoute('admin')}
             totalQuestionsCount={questions.length}
+            isAdmin={selectedRole === 'admin'}
           />
         );
       case 'dashboard':
@@ -306,18 +474,57 @@ export default function App() {
           />
         );
       case 'lessons':
-        return <LessonsView onNavigate={setCurrentRoute} />;
+         return <LessonsView onNavigate={setCurrentRoute} />;
       case 'leaderboard':
         return renderLeaderboard();
       case 'admin':
+        navigateTo('admin-dashboard');
+        return null;
+      case 'admin-login':
         return (
-          <AdminView
+          <AdminLogin
+            onBackToStudent={() => {
+              setSelectedRole(null);
+              localStorage.removeItem('ic3_admin_token');
+              navigateTo('role-select');
+            }}
+            onLoginSuccess={(user) => {
+              setIsAdminAuthenticated(true);
+              setAdminUser(user);
+              setSelectedRole('admin');
+              navigateTo('admin-dashboard');
+            }}
+          />
+        );
+      case 'admin-dashboard':
+      case 'admin-questions':
+      case 'admin-exams':
+      case 'admin-students':
+      case 'admin-settings':
+        return (
+          <AdminPanel
+            currentSubRoute={adminSubRoute}
+            onNavigateSubRoute={(sub) => {
+              setAdminSubRoute(sub);
+              navigateTo(`admin-${sub}`);
+            }}
+            onLogout={async () => {
+              await fetch('/api/admin/logout', { method: 'POST' });
+              setIsAdminAuthenticated(false);
+              setAdminUser(null);
+              setSelectedRole(null);
+              localStorage.removeItem('ic3_admin_token');
+              navigateTo('role-select');
+            }}
             googleSheetId={googleSheetId}
             setGoogleSheetId={setGoogleSheetId}
-            questions={questions}
             syncStatus={syncStatus}
             syncWithGoogleSheet={syncWithGoogleSheet}
             resetToLocalDefaults={resetToLocalDefaults}
+            onRefreshData={async () => {
+              // trigger refresh of local content
+              console.log("Admin triggered local elements update");
+            }}
           />
         );
       case 'review-mistakes':
@@ -329,10 +536,21 @@ export default function App() {
             onEnterExam={() => setCurrentRoute('mock-exam')}
             onEnterAdmin={() => setCurrentRoute('admin')}
             totalQuestionsCount={questions.length}
+            isAdmin={selectedRole === 'admin'}
           />
         );
     }
   };
+
+  const isFullscreenView = currentRoute === 'admin-login' || currentRoute === 'role-select';
+
+  if (isFullscreenView) {
+    return (
+      <div className={`min-h-screen transition duration-200 ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
+        {renderActiveView()}
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen transition duration-200 ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
@@ -401,15 +619,26 @@ export default function App() {
                 { label: 'Timed mock simulator', route: 'mock-exam', icon: Layout },
                 { label: 'Curriculum lessons', route: 'lessons', icon: BookOpen },
                 { label: 'Leaderboard rank', route: 'leaderboard', icon: Award },
-                { label: 'CMS Sync settings', route: 'admin', icon: Settings },
+                ...(selectedRole === 'admin' ? [{ label: 'CMS Sync settings', route: 'admin', icon: Settings }] : []),
               ].map((link) => {
-                const isSelected = currentRoute === link.route || (link.route === 'dashboard' && currentRoute === 'review-mistakes');
+                const isSelected = currentRoute === link.route || 
+                                  (link.route === 'admin' && currentRoute.startsWith('admin-')) ||
+                                  (link.route === 'dashboard' && currentRoute === 'review-mistakes');
                 return (
                   <button
                     id={`sidebar-link-${link.route}`}
                     key={link.route}
-                    onClick={() => {
-                      setCurrentRoute(link.route);
+                    onClick={async () => {
+                      if (link.route === 'admin') {
+                        const isAuthed = await checkAdminSession();
+                        if (isAuthed) {
+                          navigateTo('admin-dashboard');
+                        } else {
+                          navigateTo('admin-login');
+                        }
+                      } else {
+                        navigateTo(link.route);
+                      }
                       setIsSidebarOpen(false);
                     }}
                     className={`w-full p-2.5 rounded-xl text-left flex items-center justify-between text-[13px] font-semibold transition select-none cursor-pointer group ${
@@ -426,6 +655,21 @@ export default function App() {
                   </button>
                 );
               })}
+
+              <button
+                id="sidebar-link-switch-role"
+                onClick={() => {
+                  setSelectedRole(null);
+                  navigateTo('role-select');
+                  setIsSidebarOpen(false);
+                }}
+                className="w-full mt-4 p-2.5 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-left flex items-center justify-between text-[13px] font-bold text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-900 transition select-none cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <RotateCcw className="w-4 h-4 text-slate-400" />
+                  <span>Switch Role Portal</span>
+                </div>
+              </button>
             </nav>
           </div>
 
@@ -463,6 +707,15 @@ export default function App() {
               
               <div id="route-headers" className="text-left font-extrabold text-sm sm:text-base capitalize text-slate-900 dark:text-white flex items-center gap-2">
                 <span>{currentRoute.replace('-', ' ')}</span>
+                {selectedRole && (
+                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded-md uppercase tracking-wider ${
+                    selectedRole === 'admin'
+                      ? 'bg-emerald-100 text-emerald-850 dark:bg-emerald-950/40 dark:text-emerald-400'
+                      : 'bg-indigo-100 text-indigo-850 dark:bg-indigo-950/40 dark:text-indigo-400'
+                  }`}>
+                    {selectedRole === 'admin' ? 'Admin' : 'Student'}
+                  </span>
+                )}
               </div>
             </div>
 
