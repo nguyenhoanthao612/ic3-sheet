@@ -1,0 +1,6 @@
+{
+  "name": "IC3 GS6 Exam & Learning Platform",
+  "description": "A high-performance interactive training and exam simulator platform for the IC3 GS6 certification, featuring 10 dynamic quest designs synced directly from a Google Sheet CMS and powered with server-side Gemini AI tutoring feedback.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

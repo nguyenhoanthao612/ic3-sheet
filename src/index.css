@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;750&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500;700&display=swap');
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-display: "Space Grotesk", sans-serif;
+}
+
+/* Custom 3D Card Flipping utilities */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Base markdown-body for beautiful text explanations */
+.markdown-body h1, .markdown-body h2, .markdown-body h3 {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: inherit;
+}
+
+.markdown-body h1 { font-size: 1.4rem; }
+.markdown-body h2 { font-size: 1.2rem; }
+.markdown-body h3 { font-size: 1.05rem; }
+
+.markdown-body p {
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+}
+
+.markdown-body ul, .markdown-body ol {
+  margin-left: 1.25rem;
+  margin-bottom: 0.75rem;
+  list-style-type: disc;
+}
+
+.markdown-body li {
+  margin-bottom: 0.25rem;
+}
+
+.markdown-body strong {
+  font-weight: 700;
+}
+
+.markdown-body code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.85em;
+  background-color: rgba(99, 102, 241, 0.1);
+  padding: 0.15rem 0.3rem;
+  border-radius: 4px;
+}
+
+/* Custom keyframes fade-in entering transition animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom keyframes scale-up transition animation */
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-scale-up {
+  animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
